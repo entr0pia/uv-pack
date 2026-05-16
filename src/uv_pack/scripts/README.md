@@ -32,7 +32,8 @@ Both scripts implement the same behavior and differ only in platform syntax.
 
 ## Features
 
-- **Automatic uv Setup**: Installs `uv` from a bundled wheel if not found in the environment.
+- **Resilient Installation**: Automatically selects the best available tool: system `uv`, bundled `uv` (if included with `--with-uv`), or fallback to standard `pip`.
+- **Automatic uv Setup**: Installs `uv` from a bundled wheel if not found in the environment and a wheel is available.
 - **Fast Installation**: Uses `uv` for environment creation and package installation if available.
 - **Environment Reuse**: Skips virtual environment creation if `VENV_DIR` already exists.
 - **Interactive Python Discovery**: Searches for system Python if no base interpreter is specified.

@@ -52,6 +52,7 @@ Options:
 - `-s, --skip`: skip a pipeline step (can be supplied multiple times)
 - `-o, --output-directory`: path to output directory (default: `./pack`)
 - `-v, --verbose`: show more detailed pack progress logging
+- `--with-uv`: bundle the `uv` executable wheel into the bundle for high-speed installation (default: `False`)
 - `--uv-build`: extra args passed to `uv build`
 - `--uv-export`: extra args passed to `uv export`
 - `--pip-download`: extra args passed to `pip download`
@@ -103,6 +104,11 @@ PowerShell:
 .\pack\unpack.ps1
 ```
 
+The unpack scripts follow a **Progressive Enhancement** strategy to install dependencies:
+1. Use **system `uv`** if already installed in the environment.
+2. Install and use **bundled `uv`** if the `uv` wheel was included (via `--with-uv`).
+3. Fallback to standard **`pip` and `venv`** if no `uv` is available.
+
 All scripts also accept `VENV_DIR`, `PYTHON_DIR` and `BASE_PY` environment variables.
 Use `BASE_PY` when you skipped the `python` step during packing to provide a specific
 system python interpreter. If `BASE_PY` is not set and no bundled python is found,
@@ -120,6 +126,12 @@ Python releases, default is:
 
 `GITHUB_TOKEN` can be used to authenticate requests to the GitHub API to
 prevent possible rate-limiting.
+
+### Caching
+
+`uv-pack` caches the downloaded Python archives globally to speed up subsequent packing:
+- **Windows**: `%TEMP%\uv-pack`
+- **Linux/macOS**: `/var/tmp/uv-pack` (falls back to system temp if not writable)
 
 Limitations
 -----------

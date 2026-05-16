@@ -64,11 +64,25 @@ $VenvPython = $BasePy
 $HasUv = Get-Command uv -ErrorAction SilentlyContinue
 
 if (-not $HasUv) {
-  $UvWheel = Get-ChildItem -Path $WheelsDir -File -Filter "uv-*.whl" | Select-Object -First 1 -ExpandProperty FullName
-  if ($UvWheel) {
-    Write-Host "uv not found, installing from $UvWheel..."
-    & $BasePy -m pip install $UvWheel | Out-Null
-    $HasUv = Get-Command uv -ErrorAction SilentlyContinue
+  # Check if uv.exe exists near BasePy (Scripts folder)
+  $UvPath = Join-Path (Split-Path $BasePy) "uv.exe"
+  if (-not (Test-Path $UvPath)) { $UvPath = Join-Path (Split-Path $BasePy) "Scripts\uv.exe" }
+  
+  if (Test-Path $UvPath) {
+    function uv { & $UvPath $args }
+    $HasUv = $true
+  } else {
+    $UvWheel = Get-ChildItem -Path $WheelsDir -File -Filter "uv-*.whl" | Select-Object -First 1 -ExpandProperty FullName
+    if ($UvWheel) {
+      Write-Host "uv not found, installing from $UvWheel..."
+      & $BasePy -m pip install $UvWheel | Out-Null
+      $UvPath = Join-Path (Split-Path $BasePy) "uv.exe"
+      if (-not (Test-Path $UvPath)) { $UvPath = Join-Path (Split-Path $BasePy) "Scripts\uv.exe" }
+      if (Test-Path $UvPath) {
+        function uv { & $UvPath $args }
+        $HasUv = $true
+      }
+    }
   }
 }
 
@@ -87,8 +101,10 @@ if ($VenvDir) {
 }
 
 if ($HasUv) {
+  Write-Host "Installing dependencies with uv..."
   & uv pip install --python $VenvPython --no-index --find-links $WheelsDir --find-links $VendorDir -r $ReqFile --quiet
 } else {
+  Write-Host "Installing dependencies with pip..."
   $env:PIP_NO_INDEX = "1"
   $env:PIP_DISABLE_PIP_VERSION_CHECK = "1"
 

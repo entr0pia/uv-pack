@@ -53,11 +53,25 @@ fi
 [ -x "$BASE_PY" ] || die "BASE_PY not executable: $BASE_PY"
 
 if ! command -v uv >/dev/null 2>&1; then
-  UV_WHEEL="$(find "$WHEELS_DIR" -maxdepth 1 -name 'uv-*.whl' | head -n 1)"
-  if [ -n "$UV_WHEEL" ]; then
-    say "uv not found, installing from $UV_WHEEL..."
-    "$BASE_PY" -m pip install "$UV_WHEEL" >/dev/null 2>&1 || true
+  # check if uv exists near BASE_PY (e.g. in the same bin directory)
+  UV_BIN="$(dirname "$BASE_PY")/uv"
+  if [ -x "$UV_BIN" ]; then
+    alias uv="$UV_BIN"
+  else
+    UV_WHEEL="$(find "$WHEELS_DIR" -maxdepth 1 -name 'uv-*.whl' | head -n 1)"
+    if [ -n "$UV_WHEEL" ]; then
+      say "uv not found, installing from $UV_WHEEL..."
+      "$BASE_PY" -m pip install "$UV_WHEEL" >/dev/null 2>&1 || true
+      # Try one more time after install
+      UV_BIN="$(dirname "$BASE_PY")/uv"
+      [ -x "$UV_BIN" ] && alias uv="$UV_BIN"
+    fi
   fi
+fi
+
+# To make aliases work in non-interactive scripts, we need to enable them or use a function
+if [ -n "${UV_BIN:-}" ] && [ -x "$UV_BIN" ]; then
+  uv() { "$UV_BIN" "$@"; }
 fi
 
 say "Using base interpreter: $BASE_PY"
@@ -78,8 +92,10 @@ if [ -n "$VENV_DIR" ]; then
 fi
 
 if command -v uv >/dev/null 2>&1; then
+  say "Installing dependencies with uv..."
   uv pip install --python "$VENV_PY" --no-index --find-links "$WHEELS_DIR" --find-links "$VENDOR_DIR" -r "$REQ_FILE" --quiet
 else
+  say "Installing dependencies with pip..."
   export PIP_NO_INDEX=1
   export PIP_DISABLE_PIP_VERSION_CHECK=1
 
